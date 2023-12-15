@@ -30,6 +30,7 @@ The repo contains code for learning policy heuristics in logical formalism (answ
 - despot and pomcp folders contain C++ code for the two solvers.
 - julia folder contains julia code for running AdaOPS and ARDespot (equivalent to C++ DESPOT).
 - ilasp folder contains traces and files from rocksample and pocman, to generate the heuristics for the two tasks using Inductive Learning of Answer Set Programs (ILASP)
+- supplementary.pdf contains further experiments with Julia implementation of DESPOT in the rocksample domain.
 
 #RUN
 - POMCP: launch run.sh in pomcp/scripts to replicate experiments in the paper. Follow comments in the code for parameter description. The output is a xes file with statistics
