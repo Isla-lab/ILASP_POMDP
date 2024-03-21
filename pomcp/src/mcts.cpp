@@ -1,7 +1,6 @@
 #include "mcts.h"
 #include "testsimulator.h"
 #include <cmath>
-#include <clingo.hh>
 
 #include <algorithm>
 

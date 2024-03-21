@@ -10,23 +10,6 @@
 #include <random>
 #include <stdexcept>
 
-#include <z3.h>
-#include <z3++.h>
-
-#include <clingo.hh>
-
-///      TMP      
-struct Models {
-    Models(z3::context &c) : tight_model(c), loose_model(c) {}
-    z3::model tight_model;
-    z3::model loose_model;
-};
-
-struct Solution {
-    std::vector<Models> lower_bound;
-    std::vector<Models> upper_bound;
-};
-
 struct BOUNDS {
     double x1_loose;
     double x1_strict;
@@ -268,8 +251,6 @@ protected:
     mutable std::vector<double> prob_actual; //to match with actual actions generated
     KNOWLEDGE Knowledge;
     mutable std::mt19937 random_state;
-    mutable Clingo::Logger clingo_logger;
-    mutable Clingo::Control clingo_control;
 
 };
 

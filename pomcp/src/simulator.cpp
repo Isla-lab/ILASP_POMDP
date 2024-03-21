@@ -23,9 +23,7 @@ SIMULATOR::SIMULATOR()
 :   Discount(1.0),
     NumActions(0),
     NumObservations(0),
-    RewardRange(1.0),
-    clingo_logger([](Clingo::WarningCode, char const *message) { cout << message << endl;}),
-    clingo_control({{}, clingo_logger, 20})
+    RewardRange(1.0)
 {
     // cout << NormProbActions << endl;
     // if (NormProbActions){
@@ -37,9 +35,7 @@ SIMULATOR::SIMULATOR()
 SIMULATOR::SIMULATOR(int numActions, observation_t numObservations, double discount)
 :   NumActions(numActions),
     NumObservations(numObservations),
-    Discount(discount),
-    clingo_logger([](Clingo::WarningCode, char const *message) { cout << message << endl;}),
-    clingo_control({{}, clingo_logger, 20})
+    Discount(discount)
 { 
     assert(discount > 0 && discount <= 1);
     // cout << NormProbActions << endl;

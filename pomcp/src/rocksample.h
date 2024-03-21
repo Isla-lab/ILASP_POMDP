@@ -7,7 +7,6 @@
 #include "hellinger.h"
 #include "json.hpp"
 #include <string>
-#include <clingo.hh>
 
 struct ROCKSAMPLE_STATE : public STATE
 {

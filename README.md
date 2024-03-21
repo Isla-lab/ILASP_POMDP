@@ -5,7 +5,7 @@ This repo contains code for the paper:
   author={Meli, Daniele and Castellini, Alberto and Farinelli, Alessandro},
   journal={Journal of Artificial Intelligence Research},
   volume={79},
-  pages={765--816},
+  pages={725--776},
   year={2024}
 }
 
@@ -35,7 +35,7 @@ The repo contains code for learning policy heuristics in logical formalism (answ
 - supplementary.pdf contains further experiments with Julia implementation of DESPOT in the rocksample domain.
 
 # RUN
-- POMCP: launch run.sh in pomcp/scripts to replicate experiments in the paper. Follow comments in the code for parameter description. The output is a xes file with statistics
-- DESPOT: launch run.sh in despot/examples/cpp_models/{pocman, rock_sample} to replicate experiments in the paper. Follow comments in the code for parameter description. The output is a txt file with statistics
+- POMCP: build, then launch run.sh in pomcp/scripts to replicate experiments in the paper. Follow comments in the code for parameter description. The output is a xes file with statistics
+- DESPOT: build (also in the domain folder), then launch run.sh in despot/examples/cpp_models/{pocman, rock_sample} to replicate experiments in the paper. Follow comments in the code for parameter description. The output is a txt file with statistics
 - Julia: launch run.jl in julia/AdaOPS/xXOEG/test to replicate experiments in the paper (only rocksample). Follow comments in the code for parameter description.
 - ilasp: unzip traces.zip, then launch learn.sh to generate ASP heuristics from POMDP traces (follow comments in the bash file for more details). 

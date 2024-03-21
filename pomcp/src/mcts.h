@@ -4,7 +4,6 @@
 #include "simulator.h"
 #include "node.h"
 #include "statistic.h"
-#include <clingo.hh>
 
 class MCTS
 {
