@@ -10,7 +10,7 @@ import copy
 
 
 
-def gen_ilp_pocman(actions_all, ghost_norm_all, food_norm_all, observations_all, disc_return_all, avg_return):
+def gen_ilp_pocman(current_all, actions_all, ghost_norm_all, food_norm_all, observations_all, disc_return_all, avg_return):
 
     ex_count = 1
     east_list = []
@@ -22,7 +22,7 @@ def gen_ilp_pocman(actions_all, ghost_norm_all, food_norm_all, observations_all,
     action_list = ["north", "east", "south", "west"]
 
     for z in range(len(disc_return_all)):
-        if disc_return_all[z] >= avg_return:
+        if disc_return_all[z] > avg_return:
             for i in range(len(actions_all[z])): 
                 context = ""
                 line = ""
@@ -186,12 +186,12 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
 
     for z in range(len(actions_all)):
         for i in range(len(actions_all[z])): 
-            if dist_all[z][i][1] < avg_return:
-            # if True:
+            # only consider good traces (return > avg_return)
+            if dist_all[z][i][1] > avg_return:
                 if (actions_all[z][i] == "sample" and quality_all[z][i] != "bad") or i == len(actions_all[z])-1:
                     j = i
                     target_sample = -1
-                    target = -1
+                    target_check = -1
                     while j >= 0:
                         if (actions_all[z][j] == "sample" and j!=i):
                             break
@@ -205,28 +205,34 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
                         excluded_ts = ""
 
 
-
-
-
                         if actions_all[z][j] == "sample" and quality_all[z][j] != "bad":
                             sampled.append(targets_all[z][j])
                             target_sample = targets_all[z][j]
                         
-                        target = copy.deepcopy(target_sample)
-                        
                         if actions_all[z][j] == "check":
-                            target = targets_all[z][j]
+                            target_check = targets_all[z][j]
 
                         #build included and excluded
-                        if target != -1:
-                            included = actions_all[z][j] +"(" + str(target) + ")"
+                        if target_check != -1:
+                            included = actions_all[z][j] +"(" + str(target_check) + ")"
                             for id_rock in range(np.shape(dist_all[z][j][0])[0]):
-                                if id_rock != target:
+                                if id_rock != target_check:
                                     excluded += actions_all[z][j] + "(" + str(id_rock) + "), "
                             excluded = excluded[:-2]
+                            target_check = -1
+                        elif target_sample != -1:
+                            if actions_all[z][j] == "sample":
+                                included = actions_all[z][j] +"(" + str(target_sample) + ")"
+                                for id_rock in range(np.shape(dist_all[z][j][0])[0]):
+                                    if id_rock != target_sample:
+                                        excluded += actions_all[z][j] + "(" + str(id_rock) + "), "
+                                excluded = excluded[:-2]
+                            else:
+                                included = actions_all[z][j]
 
                         else:
                             included = "exit"
+
 
                         #also for target sample
                         if target_sample != -1:
@@ -235,10 +241,6 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
                                 if id_rock != target_sample:
                                     excluded_ts += "target_sample(" + str(id_rock) + "), "
                             excluded_ts = excluded_ts[:-2]
-
-
-
-
 
 
 
@@ -331,19 +333,19 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
                             check_list.append(line)
                         if target_sample != -1: #motion is relevant only when a target exists
                             if "east" not in included:
-                                line = "#pos(ex" + str(ex_count) + ", {}, {east(_)}, {" + context + "})."
+                                line = "#pos(ex" + str(ex_count) + ", {}, {east}, {" + context + "})."
                                 ex_count += 1
                                 east_list.append(line)
                             if "north" not in included:
-                                line = "#pos(ex" + str(ex_count) + ", {}, {north(_)}, {" + context + "})."
+                                line = "#pos(ex" + str(ex_count) + ", {}, {north}, {" + context + "})."
                                 ex_count += 1
                                 north_list.append(line)
                             if "south" not in included:
-                                line = "#pos(ex" + str(ex_count) + ", {}, {south(_)}, {" + context + "})."
+                                line = "#pos(ex" + str(ex_count) + ", {}, {south}, {" + context + "})."
                                 ex_count += 1
                                 south_list.append(line)
                             if "west" not in included:
-                                line = "#pos(ex" + str(ex_count) + ", {}, {west(_)}, {" + context + "})."
+                                line = "#pos(ex" + str(ex_count) + ", {}, {west}, {" + context + "})."
                                 ex_count += 1
                                 west_list.append(line)
                         else:
@@ -375,6 +377,7 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
         ilp_file.write("\n")
         ilp_file.write("#modeb(1, target_sample(var(rocks)), (positive)).\n")
         ilp_file.write("#modeh(east).\n")
+        ilp_file.write("#maxv(2).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -384,6 +387,7 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
             ilp_file.write("\n")            
         ilp_file.write("\n")
         ilp_file.write("#modeh(exit).\n")
+        ilp_file.write("#maxv(3).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -394,6 +398,7 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
         ilp_file.write("\n")
         ilp_file.write("#modeb(1, target_sample(var(rocks)), (positive)).\n")
         ilp_file.write("#modeh(north).\n")
+        ilp_file.write("#maxv(2).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -404,6 +409,7 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
         ilp_file.write("\n")
         ilp_file.write("#modeb(1, target_sample(var(rocks)), (positive)).\n")
         ilp_file.write("#modeh(south).\n")
+        ilp_file.write("#maxv(2).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -414,6 +420,7 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
         ilp_file.write("\n")
         ilp_file.write("#modeb(1, target_sample(var(rocks)), (positive)).\n")
         ilp_file.write("#modeh(west).\n")
+        ilp_file.write("#maxv(2).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -423,6 +430,7 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
             ilp_file.write("\n")            
         ilp_file.write("\n")
         ilp_file.write("#modeh(target_sample(var(rocks))).\n")
+        ilp_file.write("#maxv(3).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -432,6 +440,8 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
             ilp_file.write("\n")            
         ilp_file.write("\n")
         ilp_file.write("#modeh(check(var(rocks))).\n")
+        ilp_file.write("#modeb(1, target_sample(var(rocks)), (positive)).\n")
+        ilp_file.write("#maxv(3).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -441,6 +451,8 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
             ilp_file.write("\n")            
         ilp_file.write("\n")
         ilp_file.write("#modeh(sample(var(rocks))).\n")
+        ilp_file.write("#modeb(1, target_sample(var(rocks)), (positive)).\n")
+        ilp_file.write("#maxv(3).\n")
         for mb_l in mb_lines:
             ilp_file.write(mb_l)
 
@@ -453,93 +465,93 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
 #READ XES (UNCOMMENT EITHER POCMAN OR ROCKSAMPLE)=============================================================================================================================
 
 #POCMAN
-# filenames = ["pocman.xes"]
-# for filename in filenames:
-#     #GENERAL DATA ABOUT SCENARIO
-#     log = xes_importer.apply(filename)
-#     ghosts = log.attributes["Ghosts"]
-#     size = log.attributes["SizeX"]
-#     avg_return = log.attributes["average discounted return"]
-#     std_return = log.attributes["average discounted return std"]
+filenames = ["pocman.xes"]
+for filename in filenames:
+    #GENERAL DATA ABOUT SCENARIO
+    log = xes_importer.apply(filename)
+    ghosts = log.attributes["Ghosts"]
+    size = log.attributes["SizeX"]
+    avg_return = log.attributes["average discounted return"]
+    std_return = log.attributes["average discounted return std"]
 
-#     current_all = [] #current position of pacman
-#     dist_to_food_all = [] #manhattan from current pos to food
-#     delta_to_food_all = [] # (delta_x, delta_y) from current pos to food
-#     dist_to_ghost_all = [] #manhattan from current pos to ghost
-#     delta_to_ghost_all = [] # (delta_x, delta_y) from current pos to ghost
-#     food_norm_all = [] #sum of believes with target / sum of believes
-#     ghost_norm_all = [] #sum of believes with target / sum of believes
-#     observations_all = [] #pacman observations as 10-digits binary [see NESW; wall NESW; smell food; hear ghost]
-#     actions_all = []
-#     rewards_all = []
-#     disc_return_all = []
+    current_all = [] #current position of pacman
+    dist_to_food_all = [] #manhattan from current pos to food
+    delta_to_food_all = [] # (delta_x, delta_y) from current pos to food
+    dist_to_ghost_all = [] #manhattan from current pos to ghost
+    delta_to_ghost_all = [] # (delta_x, delta_y) from current pos to ghost
+    food_norm_all = [] #sum of believes with target / sum of believes
+    ghost_norm_all = [] #sum of believes with target / sum of believes
+    observations_all = [] #pacman observations as 10-digits binary [see NESW; wall NESW; smell food; hear ghost]
+    actions_all = []
+    rewards_all = []
+    disc_return_all = []
 
-#     i = 1
-#     while i < len(log):
+    i = 1
+    while i < len(log):
 
-#         #INIT DATA ARRAYS
-#         dist_to_food = [] #manhattan from current pos to food
-#         delta_to_food = [] # (delta_x, delta_y) from current pos to food
-#         dist_to_ghost = [] #manhattan from current pos to ghost
-#         delta_to_ghost = [] # (delta_x, delta_y) from current pos to ghost
-#         food_norm = [] #sum of believes with target / sum of believes
-#         ghost_norm = [] #sum of believes with target / sum of believes
-#         observations = []
-#         rewards = []
-#         actions = []
-#         current = []
-#         disc_return = log[i].attributes["discounted return"]
-#         for j in range(len(log[i])):
-#             if log[i][j]["belief"] != None and log[i][j]["belief"]["children"]["ghosts"]!= None and log[i][j]["belief"]["children"]["food"] != None:
-#                 belief = [(k, v) for k, v in log[i][j]["belief"]["children"]["food"]["children"].items()]
-#                 norm_belief_food = belief#[(k, v/sum_b) for k, v in belief]
-#                 belief = [(k, v) for k, v in log[i][j]["belief"]["children"]["ghosts"]["children"].items()]
-#                 norm_belief_ghost = belief#[(k, v/sum_b) for k, v in belief]
+        #INIT DATA ARRAYS
+        dist_to_food = [] #manhattan from current pos to food
+        delta_to_food = [] # (delta_x, delta_y) from current pos to food
+        dist_to_ghost = [] #manhattan from current pos to ghost
+        delta_to_ghost = [] # (delta_x, delta_y) from current pos to ghost
+        food_norm = [] #sum of believes with target / sum of believes
+        ghost_norm = [] #sum of believes with target / sum of believes
+        observations = []
+        rewards = []
+        actions = []
+        current = []
+        disc_return = log[i].attributes["discounted return"]
+        for j in range(len(log[i])):
+            if log[i][j]["belief"] != None and log[i][j]["belief"]["children"]["ghosts"]!= None and log[i][j]["belief"]["children"]["food"] != None:
+                belief = [(k, v) for k, v in log[i][j]["belief"]["children"]["food"]["children"].items()]
+                norm_belief_food = belief#[(k, v/sum_b) for k, v in belief]
+                belief = [(k, v) for k, v in log[i][j]["belief"]["children"]["ghosts"]["children"].items()]
+                norm_belief_ghost = belief#[(k, v/sum_b) for k, v in belief]
 
-#                 rewards.append(log[i][j]["reward"])
-#                 observations.append(log[i][j]["observation"])
-#                 actions.append(log[i][j]["action"])
-#                 current.append((log[i][j]["coord x"], log[i][j]["coord y"]))
-#                 food = []
-#                 ghost = []
-#                 for x in range(size):
-#                     for y in range(size):
-#                         if any([ el for el in norm_belief_food if el[0] == (str(x) + "," + str(y))]):
-#                             tup = [ el for el in norm_belief_food if el[0] == (str(x) + "," + str(y))][0]
-#                             food.append([x,y,tup[1]])
-#                         else:
-#                             food.append([x,y,0.])
+                rewards.append(log[i][j]["reward"])
+                observations.append(log[i][j]["observation"])
+                actions.append(log[i][j]["action"])
+                current.append((log[i][j]["coord x"], log[i][j]["coord y"]))
+                food = []
+                ghost = []
+                for x in range(size):
+                    for y in range(size):
+                        if any([ el for el in norm_belief_food if el[0] == (str(x) + "," + str(y))]):
+                            tup = [ el for el in norm_belief_food if el[0] == (str(x) + "," + str(y))][0]
+                            food.append([x,y,tup[1]])
+                        else:
+                            food.append([x,y,0.])
 
-#                         if any([ el for el in norm_belief_ghost if el[0] == (str(x) + "," + str(y))]):
-#                             tup = [ el for el in norm_belief_ghost if el[0] == (str(x) + "," + str(y))][0]
-#                             ghost.append([x,y,tup[1]])
-#                         else:
-#                             ghost.append([x,y,0.])
+                        if any([ el for el in norm_belief_ghost if el[0] == (str(x) + "," + str(y))]):
+                            tup = [ el for el in norm_belief_ghost if el[0] == (str(x) + "," + str(y))][0]
+                            ghost.append([x,y,tup[1]])
+                        else:
+                            ghost.append([x,y,0.])
                 
-#                 food_norm.append(food)
-#                 ghost_norm.append(ghost)
+                food_norm.append(food)
+                ghost_norm.append(ghost)
 
 
-#         actions_all.append(actions)
-#         ghost_norm_all.append(ghost_norm)
-#         food_norm_all.append(food_norm)
-#         observations_all.append(observations)
-#         rewards_all.append(rewards)
-#         disc_return_all.append(disc_return)
-#         current_all.append(current)
+        actions_all.append(actions)
+        ghost_norm_all.append(ghost_norm)
+        food_norm_all.append(food_norm)
+        observations_all.append(observations)
+        rewards_all.append(rewards)
+        disc_return_all.append(disc_return)
+        current_all.append(current)
 
-#         i += 1
+        i += 1
 
 
-#     actions_all = np.array(actions_all, dtype=object)
-#     ghost_norm_all = np.array(ghost_norm_all, dtype=object)
-#     food_norm_all = np.array(food_norm_all, dtype=object)
-#     observations_all = np.array(observations_all, dtype=object)
-#     rewards_all = np.array(rewards_all, dtype=object)
-#     disc_return_all = np.array(disc_return_all, dtype=object)
-#     current_all = np.array(current_all, dtype=object)
+    actions_all = np.array(actions_all, dtype=object)
+    ghost_norm_all = np.array(ghost_norm_all, dtype=object)
+    food_norm_all = np.array(food_norm_all, dtype=object)
+    observations_all = np.array(observations_all, dtype=object)
+    rewards_all = np.array(rewards_all, dtype=object)
+    disc_return_all = np.array(disc_return_all, dtype=object)
+    current_all = np.array(current_all, dtype=object)
 
-# gen_ilp_pocman(actions_all, ghost_norm_all, food_norm_all, observations_all, disc_return_all, avg_return)
+gen_ilp_pocman(current_all, actions_all, ghost_norm_all, food_norm_all, observations_all, disc_return_all, avg_return)
 
 
 
@@ -552,94 +564,94 @@ def gen_ilp_rs(actions_all, delta_all, dist_all, ext_norm_all, quality_all, targ
 
 
 #ROCKSAMPLE
-filenames = ["rocksample.xes"]
-inner_rocks = False
-# filenames = ["rs_run100_part11.xes", "rs_run100_part13.xes", "rs_run100_part15.xes", "rs_run1000_part11.xes", "rs_run1000_part13.xes", "rs_run1000_part15.xes"]
-for filename in filenames:
-    #GENERAL DATA ABOUT SCENARIO
-    log = xes_importer.apply(filename)
-    try:
-        rocks = [(log.attributes["rocks"]["children"][k]["children"]["coord x"], log.attributes["rocks"]["children"][k]["children"]["coord y"]) for k in log.attributes["rocks"]["children"].keys()]
-    except:
-        inner_rocks = True
-    avg_return = log.attributes["average discounted return"]
-    std_return = log.attributes["average discounted return std"]
+# filenames = ["rocksample.xes"]
+# inner_rocks = False
+# # filenames = ["rs_run100_part11.xes", "rs_run100_part13.xes", "rs_run100_part15.xes", "rs_run1000_part11.xes", "rs_run1000_part13.xes", "rs_run1000_part15.xes"]
+# for filename in filenames:
+#     #GENERAL DATA ABOUT SCENARIO
+#     log = xes_importer.apply(filename)
+#     try:
+#         rocks = [(log.attributes["rocks"]["children"][k]["children"]["coord x"], log.attributes["rocks"]["children"][k]["children"]["coord y"]) for k in log.attributes["rocks"]["children"].keys()]
+#     except:
+#         inner_rocks = True
+#     avg_return = log.attributes["average discounted return"]
+#     std_return = log.attributes["average discounted return std"]
 
-    dist_to_rocks_all = [] #manhattan from current pos to rocks
-    delta_to_rocks_all = [] # (delta_x, delta_y) from current pos to rocks
-    correct_belief_ext_all = [] #sum of believes with target
-    correct_belief_ext_norm_all = [] #sum of believes with target / sum of believes
-    actions_all = []
-    targets_all = [] #for sample and check
-    quality_all = [] #for sample, distinguish between good or bad sample
+#     dist_to_rocks_all = [] #manhattan from current pos to rocks
+#     delta_to_rocks_all = [] # (delta_x, delta_y) from current pos to rocks
+#     correct_belief_ext_all = [] #sum of believes with target
+#     correct_belief_ext_norm_all = [] #sum of believes with target / sum of believes
+#     actions_all = []
+#     targets_all = [] #for sample and check
+#     quality_all = [] #for sample, distinguish between good or bad sample
 
-    #ALL actions in rocksample
-    i = 1
-    while i < len(log):
-        if inner_rocks:
-            try:
-                rocks = [(log[i].attributes["rocks"]["children"][k]["children"]["coord x"], log[i].attributes["rocks"]["children"][k]["children"]["coord y"]) for k in log[i].attributes["rocks"]["children"].keys()]
-            except:
-                i += 1
-                continue
-        #INIT DATA ARRAYS
-        dist_to_rocks = [] #manhattan from current pos to rocks
-        delta_to_rocks = [] # (delta_x, delta_y) from current pos to rocks
-        correct_belief_ext = [] #sum of believes with target
-        correct_belief_ext_norm = [] #sum of believes with target / sum of believes
-        actions = []
-        targets = [] #for sample and check
-        quality = [] #for sample, distinguish between good or bad sample
-        for j in range(len(log[i])):
-            if log[i][j]["belief"] != None:
-                belief = [(k, v) for k, v in log[i][j]["belief"]["children"].items()]
-                sum_b = np.sum([v[1] for v in belief])
-                norm_belief = [(k, v/sum_b) for k, v in belief]
+#     #ALL actions in rocksample
+#     i = 1
+#     while i < len(log):
+#         if inner_rocks:
+#             try:
+#                 rocks = [(log[i].attributes["rocks"]["children"][k]["children"]["coord x"], log[i].attributes["rocks"]["children"][k]["children"]["coord y"]) for k in log[i].attributes["rocks"]["children"].keys()]
+#             except:
+#                 i += 1
+#                 continue
+#         #INIT DATA ARRAYS
+#         dist_to_rocks = [] #manhattan from current pos to rocks
+#         delta_to_rocks = [] # (delta_x, delta_y) from current pos to rocks
+#         correct_belief_ext = [] #sum of believes with target
+#         correct_belief_ext_norm = [] #sum of believes with target / sum of believes
+#         actions = []
+#         targets = [] #for sample and check
+#         quality = [] #for sample, distinguish between good or bad sample
+#         for j in range(len(log[i])):
+#             if log[i][j]["belief"] != None:
+#                 belief = [(k, v) for k, v in log[i][j]["belief"]["children"].items()]
+#                 sum_b = np.sum([v[1] for v in belief])
+#                 norm_belief = [(k, v/sum_b) for k, v in belief]
 
-                current = (log[i][j]["coord x"], log[i][j]["coord y"])
-                dist = []
-                delta = []
-                correct_belief = []
-                correct_belief_norm = []
-                for target in range(len(rocks)):
-                    rock = rocks[target]
-                    dist.append(abs(rock[0] - current[0]) + abs(rock[1] - current[1]))
-                    delta.append((rock[0] - current[0], rock[1] - current[1]))
+#                 current = (log[i][j]["coord x"], log[i][j]["coord y"])
+#                 dist = []
+#                 delta = []
+#                 correct_belief = []
+#                 correct_belief_norm = []
+#                 for target in range(len(rocks)):
+#                     rock = rocks[target]
+#                     dist.append(abs(rock[0] - current[0]) + abs(rock[1] - current[1]))
+#                     delta.append((rock[0] - current[0], rock[1] - current[1]))
 
-                    sum_target_norm = np.sum([v[1] for v in norm_belief if len(bin(int(v[0]))[2:])>target and bin(int(v[0]))[2:][-target-1]=="1"])
-                    sum_target = np.sum([v[1] for v in belief if len(bin(int(v[0]))[2:])>target and bin(int(v[0]))[2:][-target-1]=="1"])
-                    correct_belief.append(sum_target)
-                    correct_belief_norm.append(sum_target_norm)
-                dist_to_rocks.append((dist, log[i].attributes["discounted return"], log[i].attributes["run"]))
-                delta_to_rocks.append((delta, log[i].attributes["discounted return"], log[i].attributes["run"]))
-                correct_belief_ext.append((correct_belief, log[i].attributes["discounted return"], log[i].attributes["run"]))
-                correct_belief_ext_norm.append((correct_belief_norm, log[i].attributes["discounted return"], log[i].attributes["run"]))
+#                     sum_target_norm = np.sum([v[1] for v in norm_belief if len(bin(int(v[0]))[2:])>target and bin(int(v[0]))[2:][-target-1]=="1"])
+#                     sum_target = np.sum([v[1] for v in belief if len(bin(int(v[0]))[2:])>target and bin(int(v[0]))[2:][-target-1]=="1"])
+#                     correct_belief.append(sum_target)
+#                     correct_belief_norm.append(sum_target_norm)
+#                 dist_to_rocks.append((dist, log[i].attributes["discounted return"], log[i].attributes["run"]))
+#                 delta_to_rocks.append((delta, log[i].attributes["discounted return"], log[i].attributes["run"]))
+#                 correct_belief_ext.append((correct_belief, log[i].attributes["discounted return"], log[i].attributes["run"]))
+#                 correct_belief_ext_norm.append((correct_belief_norm, log[i].attributes["discounted return"], log[i].attributes["run"]))
 
-                actions += [log[i][j]["action"].split(" ")[0]]
-                if "sample" in log[i][j]["action"]:
-                    target = 100
-                    for q in range(len(rocks)):
-                        if current == rocks[q]:
-                            target = q
-                            break
-                    targets.append(target)
-                elif "check" in log[i][j]["action"]:
-                    targets.append(int(log[i][j]["action"].split(" ")[1]))
-                else:
-                    targets.append(-1)
-                if log[i][j]["reward"] > 0.:
-                    quality.append("good")
-                else:
-                    quality.append("bad")
+#                 actions += [log[i][j]["action"].split(" ")[0]]
+#                 if "sample" in log[i][j]["action"]:
+#                     target = 100
+#                     for q in range(len(rocks)):
+#                         if current == rocks[q]:
+#                             target = q
+#                             break
+#                     targets.append(target)
+#                 elif "check" in log[i][j]["action"]:
+#                     targets.append(int(log[i][j]["action"].split(" ")[1]))
+#                 else:
+#                     targets.append(-1)
+#                 if log[i][j]["reward"] > 0.:
+#                     quality.append("good")
+#                 else:
+#                     quality.append("bad")
 
-        targets_all.append(targets)
-        quality_all.append(quality)
-        actions_all.append(actions)
-        dist_to_rocks_all.append(dist_to_rocks)
-        delta_to_rocks_all.append(delta_to_rocks)
-        correct_belief_ext_all.append(correct_belief_ext)
-        correct_belief_ext_norm_all.append(correct_belief_ext_norm)
+#         targets_all.append(targets)
+#         quality_all.append(quality)
+#         actions_all.append(actions)
+#         dist_to_rocks_all.append(dist_to_rocks)
+#         delta_to_rocks_all.append(delta_to_rocks)
+#         correct_belief_ext_all.append(correct_belief_ext)
+#         correct_belief_ext_norm_all.append(correct_belief_ext_norm)
 
-        i += 1
+#         i += 1
 
-gen_ilp_rs(actions_all=actions_all, delta_all=delta_to_rocks_all, dist_all=dist_to_rocks_all, ext_norm_all=correct_belief_ext_norm_all, quality_all=quality_all, targets_all=targets_all, avg_return=avg_return)
+# gen_ilp_rs(actions_all=actions_all, delta_all=delta_to_rocks_all, dist_all=dist_to_rocks_all, ext_norm_all=correct_belief_ext_norm_all, quality_all=quality_all, targets_all=targets_all, avg_return=avg_return)

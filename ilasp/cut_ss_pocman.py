@@ -14,7 +14,7 @@ for a in actions:
                     where_start_atom = l[where_atom:].index("(")
                     where_end_atom = l[where_atom:].index(")")
                     substring = [l[where_atom + where_start_atom + 1 : where_atom + where_end_atom].split(",")[-2]]
-                    substring = [s for s in substring if "V" in s][-1]
+                    # substring = [s for s in substring if "V" in s][-1]
                     for relevant_var in substring:
                         count_more = l.replace(" ", "").count(relevant_var + ">=")
                         count_less = l.replace(" ", "").count(relevant_var + "<=")
